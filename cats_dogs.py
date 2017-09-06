@@ -10,6 +10,7 @@ import numpy as np
 from tools import *
 from image_processing import *
 import random
+from optparse import OptionParser
 
 from keras.models import Sequential
 
@@ -102,8 +103,18 @@ def create_model(input_size):
 
 
 if __name__ == "__main__":
+
+    parser = OptionParser()
+    parser.add_option("-p", "--preprocess-img", nargs=0, help="preprocess images (load preprocessed images if missing)")
+    (opts, args) = parser.parse_args()
+
+    print sys.argv
+    print opts.__dict__
+    print args
+
     limit = 10000
-    if True :
+    if opts.__dict__["preprocess_img"] is not None:
+        print ("Preprocessing....")
         # cats : 0
         print ("Preprocessing cats images:")
         preprocessed_cats = preprocess_imgs('train/cats', 128, limit = limit)
@@ -114,6 +125,7 @@ if __name__ == "__main__":
         preprocessed_dogs = preprocess_imgs('train/dogs', 128, limit = limit)
         store(preprocessed_cats, 'preprocessed_dogs.pckl')
     else:
+        print ("Loading preprocessed images....")
         preprocessed_cats = restore('preprocessed_cats.pckl')
         preprocessed_dogs = restore('preprocessed_dogs.pckl')
 
