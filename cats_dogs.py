@@ -5,141 +5,168 @@
 
 #see convertImg.py
 
-
-import PIL
-from PIL import Image
-import numpy as np
 import os, sys
+import numpy as np
+from tools import *
+from image_processing import *
 import random
-import pickle #store and load variables
-# import shelve #store and load variables
+
+from keras.models import Sequential
+
+from keras.layers.core import Flatten, Dense, Dropout, Lambda
+from keras.layers.convolutional import Convolution2D, MaxPooling2D, ZeroPadding2D
+from keras.optimizers import SGD, RMSprop, Adam
 
 
-def norm_image(img):
+
+
+def ConvBlock(model, layers, filters):
     """
-    Normalize PIL image
+        Adds a specified number of ZeroPadding and Covolution layers
+        to the model, and a MaxPooling layer at the very end.
 
-    Normalizes luminance to (mean,std)=(0,1), and applies a [1%, 99%] contrast stretch
+        Args:
+            layers (int):   The number of zero padded convolution layers
+                            to be added to the model.
+            filters (int):  The number of convolution filters to be 
+                            created for each layer.
     """
-    img_y, img_b, img_r = img.convert('YCbCr').split()
+    for i in range(layers):
+        model.add(ZeroPadding2D((1, 1)))
+        model.add(Convolution2D(filters, 3, 3, activation='relu'))
+    model.add(MaxPooling2D((2, 2), strides=(2, 2)))
 
-    img_y_np = np.asarray(img_y).astype(float)
 
-    img_y_np /= 255
-    img_y_np -= img_y_np.mean()
-    img_y_np /= img_y_np.std()
-    scale = np.max([np.abs(np.percentile(img_y_np, 1.0)),
-                    np.abs(np.percentile(img_y_np, 99.0))])
-    img_y_np = img_y_np / scale
-    img_y_np = np.clip(img_y_np, -1.0, 1.0)
-    img_y_np = (img_y_np + 1.0) / 2.0
-
-    img_y_np = (img_y_np * 255 + 0.5).astype(np.uint8)
-
-    img_y = Image.fromarray(img_y_np)
-
-    img_ybr = Image.merge('YCbCr', (img_y, img_b, img_r))
-
-    img_nrm = img_ybr.convert('RGB')
-
-    return img_nrm
-
-def resize_image(img, size):
+def FCBlock(model):
     """
-    Resize PIL image
+        Adds a fully connected layer of 4096 neurons to the model with a
+        Dropout of 0.5
 
-    Resizes image to be square with sidelength size. Pads with black if needed.
+        Args:   None
+        Returns:   None
     """
-    # Resize
-    n_x, n_y = img.size
-    if n_y > n_x:
-        n_y_new = size
-        n_x_new = int(size * n_x / n_y + 0.5)
+    model.add(Dense(4096, activation='relu'))
+    model.add(Dropout(0.5))
+
+
+
+
+vgg_mean = np.array([123.68, 116.779, 103.939], dtype=np.float32).reshape((3,1,1))
+def vgg_preprocess(x):
+    """
+        Subtracts the mean RGB value, and transposes RGB to BGR.
+        The mean RGB was computed on the image set used to train the VGG model.
+
+        Args: 
+            x: Image array (height x width x channels)
+        Returns:
+            Image array (height x width x transposed_channels)
+    """
+    x = x - vgg_mean
+    return x[:, ::-1] # reverse axis rgb->bgr
+
+def no_process(x):
+    # return x[:, ::-1]
+    return x
+
+def create_model(input_size):
+    """
+        Creates the VGG16 network achitecture and loads the pretrained weights.
+
+        Args:   None
+        Returns:   None
+    """
+
+    model = Sequential()
+    # model.add(Lambda(no_process, input_shape=(3,input_size,input_size), output_shape=(3,input_size,input_size)))
+    model.add(Lambda(no_process, input_shape=(input_size,input_size, 3), output_shape=(input_size,input_size,3)))
+
+    ConvBlock(model, 2, 16)
+    ConvBlock(model, 2, 16)
+    ConvBlock(model, 2, 64)
+    ConvBlock(model, 2, 64)
+    # ConvBlock(model, 2, 128)
+    # ConvBlock(model, 3, 256)
+    # ConvBlock(model, 3, 512)
+    # ConvBlock(model, 3, 512)
+
+    model.add(Flatten())
+    FCBlock(model)
+    FCBlock(model)
+    FCBlock(model)
+    FCBlock(model)
+
+    model.add(Dense(1, activation='sigmoid'))
+
+    return model
+
+
+if __name__ == "__main__":
+    limit = 10000
+    if True :
+        # cats : 0
+        print ("Preprocessing cats images:")
+        preprocessed_cats = preprocess_imgs('train/cats', 128, limit = limit)
+        store(preprocessed_cats, 'preprocessed_cats.pckl')
+
+        # dogs : 1
+        print ("Preprocessing dogs images:")
+        preprocessed_dogs = preprocess_imgs('train/dogs', 128, limit = limit)
+        store(preprocessed_cats, 'preprocessed_dogs.pckl')
     else:
-        n_x_new = size
-        n_y_new = int(size * n_y / n_x + 0.5)
+        preprocessed_cats = restore('preprocessed_cats.pckl')
+        preprocessed_dogs = restore('preprocessed_dogs.pckl')
 
-    img_res = img.resize((n_x_new, n_y_new), resample=PIL.Image.BICUBIC)
+    limit = len(preprocessed_cats)
 
-    # Pad the borders to create a square image
-    img_pad = Image.new('RGB', (size, size), (128, 128, 128))
-    ulc = ((size - n_x_new) // 2, (size - n_y_new) // 2)
-    img_pad.paste(img_res, ulc)
+    # labelling the data
+    # cats = [1 0] and dogs = [0 1]
+    # zeros = np.zeros((limit, 1))
+    # ones  = np.ones((limit, 1))
+    # Ycats = np.array((ones, zeros))
+    # Ydogs = np.array((zeros, ones))
+    # Y = np.concatenate((Ycats, Ydogs), axis=1)
 
-    return img_pad
+    # labelling the data
+    Ycats = np.zeros((limit, 1))
+    Ydogs = np.ones((limit, 1))
+    Y = np.concatenate((Ycats, Ydogs))
 
-import sys
+    print Ycats.shape
+    print Ydogs.shape
+    print Y.shape
 
 
-def progress(count, total, status=''):
-# As suggested by Rom Ruben (see: http://stackoverflow.com/questions/3173320/text-progress-bar-in-the-console/27871113#comment50529068_27871113)
-    bar_len = 60
-    filled_len = int(round(bar_len * count / float(total)))
 
-    percents = round(100.0 * count / float(total), 1)
-    bar = '=' * filled_len + '-' * (bar_len - filled_len)
+    Xcats = np.array(preprocessed_cats)
+    Xdogs = np.array(preprocessed_dogs)
+    print Xcats.shape
+    print Xdogs.shape
 
-    sys.stdout.write('[%s] %s%s ...%s\r' % (bar, percents, '%', status))
-    sys.stdout.flush() 
+    X = np.concatenate((Xcats, Xdogs))
 
-def preprocess_imgs(img_size, limit = 100):
-    i = 0
-    resized_img = []
-    for img in os.listdir("train/cats"):
-        if i >= limit:
-            break
-        im = Image.open("train/cats/"+img)
-        reduced_img = resize_image(im, img_size)
-        resized_img.append(np.array(reduced_img))
-        i+=1
-        progress(i, limit)
-    print "\n"
-    return resized_img
+    print X.shape
+
+    model = create_model(128)
+    model.summary()
+    
+    model.compile(loss='binary_crossentropy',
+              # optimizer=SGD(lr=10.0),
+              optimizer=RMSprop(),
+              metrics=['accuracy'])
+
+    if os.path.exists("model.h5"):
+        model.load_weights("model.h5")
+
+    model.fit(X,Y, epochs=1, batch_size=20)
+
+    model.save_weights("model.h5")
+    #model.load_weights("model.h5")
 
 
 
 # im = Image.open("train/cats/cat.115.jpg")
 # im.show()
 
-def store(obj, target):
-    file = open(target, 'wb')
-    pickle.Pickler(file).dump(obj)
-    # pickle.dump(obj, f)
-    file.close()
 
-def restore(source):
-    f = open(source, 'rb')
-    obj = pickle.load(f)
-    f.close()
-    return obj
-
-
-    
-# def store(obj, target):
-#     my_shelf = shelve.open(target,'n') # 'n' for new
-#     my_shelf[target] = obj
-#     my_shelf.close()
-
-
-# def restore(source):
-#     my_shelf = shelve.open(source)
-#     data = my_shelf[source]
-#     my_shelf.close()
-#     return data
-
-
-
-if __name__ == "__main__":
-    limit = 1000#0
-    if False :
-        preprocessed_imgs = preprocess_imgs(128, limit = limit)
-        store(preprocessed_imgs, 'preprocessed_imgs.pckl')
-    else:
-        preprocessed_imgs = restore('preprocessed_imgs.pckl')
-
-    print random.randint(0,limit - 1)
-    print preprocessed_imgs[random.randint(0,limit - 1)].shape
-    # print random.randint(0,limit - 1)
-    # preprocessed_imgs[random.randint(0,limit - 1)].show()
-    # print random.randint(0,limit - 1)
-    # preprocessed_imgs[random.randint(0,limit - 1)].show()
+# eg. {'cats': 0, 'dogs': 1}

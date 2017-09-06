@@ -1,15 +1,13 @@
+# -*- coding: utf-8 -*-
+
 import PIL
 from PIL import Image
 import numpy as np
+import os, sys
+from tools import *
 
 
-
-im = Image.open("train/cats/cat.115.jpg")
-# im.show()
-
-print (np.array(im).shape)
-
-
+#inspired from https://www.kaggle.com/gauss256/preprocess-images
 
 def norm_image(img):
     """
@@ -64,8 +62,19 @@ def resize_image(img, size):
 
     return img_pad
 
-red_img = resize_image(im, 128)
-print (np.array(red_img).shape)
-# red_img.show()
 
-norm_image(red_img).show()
+
+def preprocess_imgs(img_folder, img_size, limit = 100):
+    i = 0
+    processed_img = []
+    for img in os.listdir(img_folder):
+        if i >= limit:
+            break
+        im = Image.open(os.path.join(img_folder,img))
+        reduced_img = resize_image(im, img_size)
+        norm_img = norm_image(reduced_img)
+        processed_img.append(np.array(norm_img))
+        i+=1
+        progress(i, limit)
+    print "\n"
+    return processed_img
