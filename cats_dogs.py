@@ -100,8 +100,6 @@ def create_model(input_size):
 
     fname = 'vgg16.h5'
     model.load_weights(fname)
-    
-    model.add(Dense(2, activation='sigmoid'))
 
     return model
 
@@ -147,40 +145,56 @@ if __name__ == "__main__":
     # Ydogs = np.ones((limit, 1))
     # Y = np.concatenate((Ycats, Ydogs))
 
-    print Ycats.shape
-    print Ydogs.shape
-    print Y.shape
+    print (Ycats.shape)
+    print (Ydogs.shape)
+    print (Y.shape)
 
     Xcats = np.array(preprocessed_cats)
     Xdogs = np.array(preprocessed_dogs)
-    print Xcats.shape
-    print Xdogs.shape
+    print (Xcats.shape)
+    print (Xdogs.shape)
 
     X = np.concatenate((Xcats, Xdogs))
-    print X.shape
+    print (X.shape)
 
     X = X.reshape(X.shape[0], 3, IMG_SIZE, IMG_SIZE)
-    print X.shape
+    print (X.shape)
 
     model = create_model(IMG_SIZE)
     model.summary()
     
-    model.compile(
+    
+
+
+    
+    fine_tune_model = Sequential()
+    fine_tune_model.add(Dense(2, activation='sigmoid', input_shape=(1000,)))
+
+
+    if os.path.exists("model.h5"):
+        fine_tune_model.load_weights("model.h5")
+
+
+    fine_tune_model.summary()
+
+
+    fine_tune_model.compile(
             # loss='binary_crossentropy',
               # optimizer=SGD(lr=10.0),
               # optimizer=RMSprop(),
               optimizer=Adam(lr=0.001),
               loss='categorical_crossentropy',
               metrics=['accuracy'])
-
-    if os.path.exists("model.h5"):
-        model.load_weights("model.h5")
-
     
-    
-    model.fit(X,Y, epochs=1, batch_size=64)
+    print ("Making predictions")
+    print (X.shape)
+    # print (X[:50,:,:].shape)
 
-    model.save_weights("model.h5")
+    vgg_predictions = model.predict(X[50:100,:,:])
+    print (vgg_predictions.shape)
+    fine_tune_model.fit(vgg_predictions,Y[50:100,:], epochs=10, batch_size=50)
+
+    fine_tune_model.save_weights("model.h5")
     #model.load_weights("model.h5")
 
 
