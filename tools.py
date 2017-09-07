@@ -2,9 +2,9 @@
 
 
 import os, sys
-import pickle #store and load variables
+# import pickle #store and load variables
 # import shelve #store and load variables
-
+import bcolz
 
 
 #############################
@@ -28,6 +28,11 @@ def progress(count, total, status=''):
 #       STORING DATA        #
 #############################
 
+
+
+#############################
+#           SHELF           #
+#############################
     
 # def store(obj, target):
 #     my_shelf = shelve.open(target,'n') # 'n' for new
@@ -42,14 +47,34 @@ def progress(count, total, status=''):
 #     return data
 
 
+
+
+#############################
+#           PICKLE          #
+#############################
+
+# def store(obj, target):
+#     file = open(target, 'wb')
+#     pickle.Pickler(file).dump(obj)
+#     # pickle.dump(obj, f)
+#     file.close()
+
+# def restore(source):
+#     f = open(source, 'rb')
+#     obj = pickle.load(f)
+#     f.close()
+#     return obj
+
+
+
+
+#############################
+#           BCOLZ           #
+#############################
+
 def store(obj, target):
-    file = open(target, 'wb')
-    pickle.Pickler(file).dump(obj)
-    # pickle.dump(obj, f)
-    file.close()
+    c = bcolz.carray(obj, rootdir=target, mode='w'); 
+    c.flush()
 
 def restore(source):
-    f = open(source, 'rb')
-    obj = pickle.load(f)
-    f.close()
-    return obj
+    return bcolz.open(source)[:]
