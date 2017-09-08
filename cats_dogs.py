@@ -187,14 +187,16 @@ if __name__ == "__main__":
               metrics=['accuracy'])
     
     print ("Making predictions")
-    print (X.shape)
+    # print (X.shape)
     # print (X[:50,:,:].shape)
 
-    vgg_predictions = model.predict(X[50:100,:,:])
-    print (vgg_predictions.shape)
-    fine_tune_model.fit(vgg_predictions,Y[50:100,:], epochs=10, batch_size=50)
+    for i in range(limit/50 - 1):
+        print ("fitting items {} to {}".format(i*50,(i+1)*50))
+        vgg_predictions = model.predict(X[i*50:(i+1)*50,:,:])
+        # print (vgg_predictions.shape)
+        fine_tune_model.fit(vgg_predictions,Y[i*50:(i+1)*50,:], epochs=10, batch_size=50)
 
-    fine_tune_model.save_weights("model.h5")
+        fine_tune_model.save_weights("model.h5")
     #model.load_weights("model.h5")
 
 
