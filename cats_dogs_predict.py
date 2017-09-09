@@ -1,10 +1,5 @@
 # -*- coding: utf-8 -*-
 
-#preprocessing images
-#i need all the images to become a numpy array of the same size
-
-#see convertImg.py
-
 import os, sys
 import numpy as np
 from tools import *
@@ -14,7 +9,6 @@ from optparse import OptionParser
 from model import *
 
 from keras import backend
-
 
 if __name__ == "__main__":
 
@@ -28,7 +22,7 @@ if __name__ == "__main__":
     limit = 1000
     if opts.__dict__["preprocess_img"] is not None:
         print ("Preprocessing....")
-        # cats : 0
+        # # cats : 0
         print ("Preprocessing cats images:")
         preprocessed_cats = preprocess_imgs('train/cats', IMG_SIZE, limit = limit)
         store(preprocessed_cats, 'preprocessed_cats.pckl')
@@ -37,6 +31,9 @@ if __name__ == "__main__":
         print ("Preprocessing dogs images:")
         preprocessed_dogs = preprocess_imgs('train/dogs', IMG_SIZE, limit = limit)
         store(preprocessed_cats, 'preprocessed_dogs.pckl')
+
+        # preprocessed_imgs = get_batches('train', IMG_SIZE, limit = limit)
+        # store(preprocessed_imgs, 'preprocessed_dogs.pckl')
     else:
         print ("Loading preprocessed images....")
         preprocessed_cats = restore('preprocessed_cats.pckl')
@@ -73,29 +70,23 @@ if __name__ == "__main__":
     print (X.shape)
 
     model = create_model(IMG_SIZE)
-
-    model.pop()
-    for layer in model.layers: layer.trainable=False
     
     
-    model.add(Dense(2, activation='sigmoid', input_shape=(1000,)))
-    model.summary()
+    # model.add(Dense(2, activation='sigmoid', input_shape=(1000,)))
+    # model.summary()
 
 
-    if os.path.exists("model.h5"):
-        model.load_weights("model.h5")
+    # if os.path.exists("model.h5"):
+    #     model.load_weights("model.h5")
+
+    print ("Predict a cat: ")
+    print ( model.predict(X[50:51,:,:]).argmax(axis = 1) )
+
+    im = Image.open("train/cats/cat.50.jpg")
+    im.show()
 
 
-    model.compile(
-            # loss='binary_crossentropy',
-              # optimizer=SGD(lr=10.0),
-              optimizer=RMSprop(),
-              # optimizer=Adam(lr=0.001),
-              loss='categorical_crossentropy',
-              metrics=['accuracy'])
-    
-    model.fit(X,Y, epochs=1, batch_size=50)
-
-    model.save_weights("model.h5")
+    print ("Predict a dog: ")
+    print ( model.predict(X[1001:1002,:,:]).argmax(axis = 1) )
 
 # eg. {'cats': 0, 'dogs': 1}

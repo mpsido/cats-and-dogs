@@ -5,6 +5,7 @@ from PIL import Image
 import numpy as np
 import os, sys
 from tools import *
+from keras.preprocessing import image, sequence
 
 
 #inspired from https://www.kaggle.com/gauss256/preprocess-images
@@ -78,3 +79,9 @@ def preprocess_imgs(img_folder, img_size, limit = 100):
         progress(i, limit)
     print "\n"
     return processed_img
+
+
+def get_batches(img_folder, img_size, limit = 100):
+    gen=image.ImageDataGenerator()
+    return gen.flow_from_directory(img_folder, target_size=(img_size,img_size),
+        class_mode='categorical', shuffle=True, batch_size=8).next()
