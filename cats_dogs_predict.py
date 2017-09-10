@@ -32,7 +32,7 @@ if __name__ == "__main__":
         preprocessed_dogs = preprocess_imgs('train/dogs', IMG_SIZE, limit = limit)
         store(preprocessed_cats, 'preprocessed_dogs.pckl')
 
-        # preprocessed_imgs = get_batches('train', IMG_SIZE, limit = limit)
+        # preprocessed_imgs = get_batches('train', IMG_SIZE)
         # store(preprocessed_imgs, 'preprocessed_dogs.pckl')
     else:
         print ("Loading preprocessed images....")
@@ -54,23 +54,19 @@ if __name__ == "__main__":
     # Ydogs = np.ones((limit, 1))
     # Y = np.concatenate((Ycats, Ydogs))
 
-    print (Ycats.shape)
-    print (Ydogs.shape)
-    print (Y.shape)
+    print ("Y's shape:", Y.shape)
 
     Xcats = np.array(preprocessed_cats)
     Xdogs = np.array(preprocessed_dogs)
-    print (Xcats.shape)
-    print (Xdogs.shape)
 
     X = np.concatenate((Xcats, Xdogs))
-    print (X.shape)
+    print ("X's shape:", X.shape)
 
-    X = X.reshape(X.shape[0], 3, IMG_SIZE, IMG_SIZE)
-    print (X.shape)
+    X = np.swapaxes(X, 1, 3)
+    print ("X's reshaped shape:", X.shape)
 
     model = create_model(IMG_SIZE)
-    
+
     
     # model.add(Dense(2, activation='sigmoid', input_shape=(1000,)))
     # model.summary()
@@ -79,14 +75,40 @@ if __name__ == "__main__":
     # if os.path.exists("model.h5"):
     #     model.load_weights("model.h5")
 
-    print ("Predict a cat: ")
-    print ( model.predict(X[50:51,:,:]).argmax(axis = 1) )
+    classes = get_classes()
 
-    im = Image.open("train/cats/cat.50.jpg")
-    im.show()
+    print ("Predict a cat: ")
+    cat_prediction = model.predict(X[50,:,:].reshape(1,3,224,224)).argmax(axis = 1)[0]
+    print ( cat_prediction, classes[cat_prediction] )
+
+    # print np.rollaxis(X[50,:,:], 0,3).shape
+
+    if False:
+        im = Image.fromarray(np.swapaxes(X[50,:,:], 0 , 2) )
+        # im = Image.open("train/cats/cat.50.jpg")
+        im.show()
 
 
     print ("Predict a dog: ")
-    print ( model.predict(X[1001:1002,:,:]).argmax(axis = 1) )
+    dog_prediction = model.predict(X[1001,:,:].reshape(1,3,224,224)).argmax(axis = 1)[0]
+    print (dog_prediction, classes[dog_prediction])
+
+
+    if os.path.exists('conv_output.pckl'):
+        print "Loading convolutions weights"
+        dense_model, conv_output = load_convolution_outputs()
+    else : 
+        print ("Save convolution outputs")
+        dense_model, conv_output = save_convolution_outputs(X, model)
+
+
+
+    print ("Predict a cat: ")
+    cat_prediction = model.predict(X[50,:,:].reshape(1,3,224,224)).argmax(axis = 1)[0]
+    print ( cat_prediction, classes[cat_prediction] )
+
+    print ("Predict a dog: ")
+    dog_prediction = model.predict(X[1001,:,:].reshape(1,3,224,224)).argmax(axis = 1)[0]
+    print (dog_prediction, classes[dog_prediction])
 
 # eg. {'cats': 0, 'dogs': 1}

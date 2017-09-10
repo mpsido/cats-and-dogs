@@ -10,6 +10,10 @@ from keras.layers.core import Flatten, Dense, Dropout, Lambda
 from keras.layers.convolutional import Convolution2D, MaxPooling2D, ZeroPadding2D
 from keras.optimizers import SGD, RMSprop, Adam
 
+from tools import * #store arrays
+
+import json
+
 
 def ConvBlock(model, layers, filters):
     """
@@ -90,3 +94,43 @@ def create_model(input_size):
     model.load_weights(fname)
 
     return model
+
+def get_classes():
+    """
+        Downloads the Imagenet classes index file and loads it to self.classes.
+        The file is downloaded only if it not already in the cache.
+    """
+    with open('imagenet_class_index.json') as f:
+        class_dict = json.load(f)
+    return [class_dict[str(i)][1] for i in range(len(class_dict))]
+
+
+
+def save_convolution_outputs(X, model, fpath = 'conv_output.pckl', nb_dense_layers = 6):
+    dense_models = []
+    for i in range(nb_dense_layers):
+        dense_models.append(model.layers[-1])
+        model.pop()
+
+    conv_output = model.predict(X)
+
+    store(conv_output, fpath)
+
+    #restore dense layers
+    for i in range(6):
+        pop_model = dense_models[-1-i]
+        print len(dense_models)
+        print type(pop_model)
+        model.add(pop_model)
+
+    return dense_models, conv_output
+
+
+def load_convolution_outputs(fpath = 'conv_output.pckl'):
+    conv_output = restore(fpath)
+    dense_models = []
+    for i in range(nb_dense_layers):
+        dense_models.append(model.layers[-1])
+        model.pop()
+
+    return dense_models, conv_output
