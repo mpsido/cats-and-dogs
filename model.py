@@ -128,9 +128,5 @@ def save_convolution_outputs(X, model, fpath = 'conv_output.pckl', nb_dense_laye
 
 def load_convolution_outputs(fpath = 'conv_output.pckl'):
     conv_output = restore(fpath)
-    dense_models = []
-    for i in range(nb_dense_layers):
-        dense_models.append(model.layers[-1])
-        model.pop()
 
-    return dense_models, conv_output
+    return conv_output

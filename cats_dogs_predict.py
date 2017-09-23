@@ -35,9 +35,13 @@ if __name__ == "__main__":
         # preprocessed_imgs = get_batches('train', IMG_SIZE)
         # store(preprocessed_imgs, 'preprocessed_dogs.pckl')
     else:
-        print ("Loading preprocessed images....")
-        preprocessed_cats = restore('preprocessed_cats.pckl')
-        preprocessed_dogs = restore('preprocessed_dogs.pckl')
+        if os.path.exists('conv_output.pckl'):
+            print "Loading convolutions weights"
+            dense_model, conv_output = load_convolution_outputs()
+        else : 
+            print ("Loading preprocessed images....")
+            preprocessed_cats = restore('preprocessed_cats.pckl')
+            preprocessed_dogs = restore('preprocessed_dogs.pckl')
 
     limit = len(preprocessed_cats)
 
@@ -110,5 +114,18 @@ if __name__ == "__main__":
     print ("Predict a dog: ")
     dog_prediction = model.predict(X[1001,:,:].reshape(1,3,224,224)).argmax(axis = 1)[0]
     print (dog_prediction, classes[dog_prediction])
+
+
+    print conv_output.shape
+
+    # print ("Predict a cat: ")
+    # cat_prediction = dense_model.predict(conv_output[0,:])
+    # cat_prediction = model.predict(X[50,:,:].reshape(1,3,224,224)).argmax(axis = 1)[0]
+    # print ( cat_prediction, classes[cat_prediction] )
+
+    # print ("Predict a dog: ")
+    # dog_prediction = model.predict(X[1001,:,:].reshape(1,3,224,224)).argmax(axis = 1)[0]
+    # print (dog_prediction, classes[dog_prediction])
+
 
 # eg. {'cats': 0, 'dogs': 1}
